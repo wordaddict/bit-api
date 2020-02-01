@@ -8,6 +8,8 @@
  const config = require('../config/settings');
  const uuid = require('uuid/v4')
  const bcrypt = require('bcrypt');
+ const jwt = require('jsonwebtoken')
+ const jwt_decode = require('jwt-decode')
 
  // Get all categories
  const allCategoryData = require('../config/config')
@@ -84,10 +86,18 @@
             }
             const hash = emailCheck.password;
             if(bcrypt.compareSync(password, hash)) {
-                return Response.success(res, {
-                message: 'User successfully logged in',
-                response: emailCheck,
-                }, HttpStatus.OK)
+                const payload = { email: emailCheck.email, id: emailCheck._id }
+                return jwt.sign(payload, process.env.JWT_KEY, { expiresIn: '1h' }, (err, token) => {
+                    console.log('errrr', err)
+                    return Response.success(res, {
+                        message: 'User successfully logged in',
+                        response: {
+                            data: emailCheck,
+                            token: token
+                        },
+                        }, HttpStatus.OK)
+                })
+              
             } else {
                 return Response.failure(res, {
                 message: 'Invalid password',
@@ -112,13 +122,32 @@
 
     getAllCategories(req, res){
         let allCategories = [];
-        for (let cat in allCategoryData){
-            allCategories.push(cat);
+        // token
+        let token = req.headers['authorization'] || req.headers['x-access-token']
+        if (token.startsWith('Bearer ')) {
+            token = token.slice(7, token.length)
         }
-        return Response.success(res, {
-            message: 'All categories gotten successfully',
-            response: allCategories,
-            }, HttpStatus.OK)
+
+        if (token) {
+            jwt.verify(token, process.env.JWT_KEY, async (err, decoded) => {
+                if (err) {
+                    console.log('Sorry,an error was found in admin viewing users token validation ', err)
+                    return Response.failure(res, { message: 'Error!! wrong token' }, HttpStatus.UNAUTHORIZED);
+                }
+                for (let cat in allCategoryData){
+                    allCategories.push(cat);
+                }
+                return Response.success(res, {
+                    message: 'All categories gotten successfully',
+                    response: allCategories,
+                    }, HttpStatus.OK)
+            })
+           
+        } else {
+            return Response.failure(res, { message: 'Error!! pls provide token' }, HttpStatus.BAD_REQUEST);
+        }
+
+       
     };
 
     getSubCategories(req, res){
@@ -130,18 +159,36 @@
         };
 
         let subCategories = [];
-        for (let cat in allCategoryData){
-            if(category === cat){
-                subCategories.push(allCategoryData[cat]);
-            }
+        //
+        // token
+        let token = req.headers['authorization'] || req.headers['x-access-token']
+        if (token.startsWith('Bearer ')) {
+            token = token.slice(7, token.length)
         }
-        if(subCategories.length === 0){
-            return Response.failure(res, { message: "Category doesn't exist" }, HttpStatus.BAD_REQUEST);
+
+        if (token) {
+            jwt.verify(token, process.env.JWT_KEY, async (err, decoded) => {
+                if (err) {
+                    console.log('Sorry,an error was found in admin viewing users token validation ', err)
+                    return Response.failure(res, { message: 'Error!! wrong token' }, HttpStatus.UNAUTHORIZED);
+                }
+                for (let cat in allCategoryData){
+                    if(category === cat){
+                        subCategories.push(allCategoryData[cat]);
+                    }
+                }
+                if(subCategories.length === 0){
+                    return Response.failure(res, { message: "Category doesn't exist" }, HttpStatus.BAD_REQUEST);
+                }
+                return Response.success(res, {
+                    message: 'All subcategories gotten successfully',
+                    response: subCategories,
+                    }, HttpStatus.OK)
+            })
+            
+        } else {
+            return Response.failure(res, { message: 'Error!! pls provide token' }, HttpStatus.BAD_REQUEST);
         }
-        return Response.success(res, {
-            message: 'All subcategories gotten successfully',
-            response: subCategories,
-            }, HttpStatus.OK)
     }
 
     async startATrade(req, res){
@@ -157,11 +204,29 @@
             trade_id: uuid()
         };
         try {
-           const resp = await this.mainService.createNewTrade(param);
-            return Response.success(res, {
-                message: 'Trade created successfully',
-                response: resp
-              }, HttpStatus.CREATED)
+                // token
+            let token = req.headers['authorization'] || req.headers['x-access-token']
+            if (token.startsWith('Bearer ')) {
+                token = token.slice(7, token.length)
+            }
+
+            if (token) {
+                jwt.verify(token, process.env.JWT_KEY, async (err, decoded) => {
+                    if (err) {
+                        console.log('Sorry,an error was found in admin viewing users token validation ', err)
+                        return Response.failure(res, { message: 'Error!! wrong token' }, HttpStatus.UNAUTHORIZED);
+                    }
+                    const resp = await this.mainService.createNewTrade(param);
+                    return Response.success(res, {
+                        message: 'Trade created successfully',
+                        response: resp
+                    }, HttpStatus.CREATED)
+                })
+                
+            } else {
+                return Response.failure(res, { message: 'Error!! pls provide token' }, HttpStatus.BAD_REQUEST);
+            }
+            
         } catch(e){
             console.log('error creating users', e);
             return Response.failure(res, {
@@ -178,11 +243,29 @@
         };
 
         try {
-            const resp = await this.mainService.getAllTrades(userId);
-             return Response.success(res, {
-                 message: 'Trade gotten successfully',
-                 response: resp
-               }, HttpStatus.OK)
+            // token
+            let token = req.headers['authorization'] || req.headers['x-access-token']
+            if (token.startsWith('Bearer ')) {
+                token = token.slice(7, token.length)
+            }
+
+            if (token) {
+                jwt.verify(token, process.env.JWT_KEY, async (err, decoded) => {
+                    if (err) {
+                        console.log('Sorry,an error was found in admin viewing users token validation ', err)
+                        return Response.failure(res, { message: 'Error!! wrong token' }, HttpStatus.UNAUTHORIZED);
+                    }
+                   
+                    const resp = await this.mainService.getAllTrades(userId);
+                    return Response.success(res, {
+                        message: 'Trade gotten successfully',
+                        response: resp
+                    }, HttpStatus.OK)
+                })
+                
+            } else {
+                return Response.failure(res, { message: 'Error!! pls provide token' }, HttpStatus.BAD_REQUEST);
+            }
          } catch(e){
              console.log('error geting trades', e);
              return Response.failure(res, {
@@ -199,20 +282,38 @@
             return Response.failure(res, { message: 'Error!! pls provide, userId, category, subcategory' }, HttpStatus.BAD_REQUEST);
         };
 
-        let finalAmount;
-        for (let cat in allCategoryData){
-            if(category === cat){
-                for (let sub of allCategoryData[cat]){
-                    if(sub.name === subcategory){
-                        finalAmount = amount * Number(sub.rate)
+        // token
+        let token = req.headers['authorization'] || req.headers['x-access-token']
+        if (token.startsWith('Bearer ')) {
+            token = token.slice(7, token.length)
+        }
+
+        if (token) {
+            jwt.verify(token, process.env.JWT_KEY, async (err, decoded) => {
+                if (err) {
+                    console.log('Sorry,an error was found in admin viewing users token validation ', err)
+                    return Response.failure(res, { message: 'Error!! wrong token' }, HttpStatus.UNAUTHORIZED);
+                }
+              
+            let finalAmount;
+            for (let cat in allCategoryData){
+                if(category === cat){
+                    for (let sub of allCategoryData[cat]){
+                        if(sub.name === subcategory){
+                            finalAmount = amount * Number(sub.rate)
+                        }
                     }
                 }
             }
+            return Response.success(res, {
+                message: 'Final rate amount',
+                response: finalAmount
+            }, HttpStatus.OK)
+            })
+           
+        } else {
+            return Response.failure(res, { message: 'Error!! pls provide token' }, HttpStatus.BAD_REQUEST);
         }
-        return Response.success(res, {
-            message: 'Final rate amount',
-            response: finalAmount
-          }, HttpStatus.OK)
     }
 
     async addAccount(req, res){
@@ -227,11 +328,29 @@
             userId, account_name, account_number, bank_name
         };
         try {
-           const resp = await this.mainService.saveAccount(param);
-            return Response.success(res, {
-                message: 'Account created successfully',
-                response: resp
-              }, HttpStatus.CREATED)
+
+            // token
+            let token = req.headers['authorization'] || req.headers['x-access-token']
+            if (token.startsWith('Bearer ')) {
+                token = token.slice(7, token.length)
+            }
+
+            if (token) {
+                jwt.verify(token, process.env.JWT_KEY, async (err, decoded) => {
+                    if (err) {
+                        console.log('Sorry,an error was found in admin viewing users token validation ', err)
+                        return Response.failure(res, { message: 'Error!! wrong token' }, HttpStatus.UNAUTHORIZED);
+                    }
+                    const resp = await this.mainService.saveAccount(param);
+                    return Response.success(res, {
+                        message: 'Account created successfully',
+                        response: resp
+                      }, HttpStatus.CREATED)
+                })
+                
+            } else {
+                return Response.failure(res, { message: 'Error!! pls provide token' }, HttpStatus.BAD_REQUEST);
+            }
         } catch(e){
             console.log('error creating account', e);
             return Response.failure(res, {
@@ -248,11 +367,28 @@
         };
 
         try {
-            const resp = await this.mainService.getAllAccount(userId);
-             return Response.success(res, {
-                 message: 'Account gotten successfully',
-                 response: resp
-               }, HttpStatus.OK)
+            // token
+            let token = req.headers['authorization'] || req.headers['x-access-token']
+            if (token.startsWith('Bearer ')) {
+                token = token.slice(7, token.length)
+            }
+
+            if (token) {
+                jwt.verify(token, process.env.JWT_KEY, async (err, decoded) => {
+                    if (err) {
+                        console.log('Sorry,an error was found in admin viewing users token validation ', err)
+                        return Response.failure(res, { message: 'Error!! wrong token' }, HttpStatus.UNAUTHORIZED);
+                    }
+                    const resp = await this.mainService.getAllAccount(userId);
+                    return Response.success(res, {
+                        message: 'Account gotten successfully',
+                        response: resp
+                      }, HttpStatus.OK)
+                })
+                
+            } else {
+                return Response.failure(res, { message: 'Error!! pls provide token' }, HttpStatus.BAD_REQUEST);
+            }
          } catch(e){
              console.log('error getting account', e);
              return Response.failure(res, {

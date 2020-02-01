@@ -4,6 +4,7 @@ dotenv.config();
 const restify = require('restify');
 const plugins = require('restify-plugins');
 const corsMiddleware = require('restify-cors-middleware');
+const passport = require('passport')
 
 
 // service locator via dependency injection
@@ -41,6 +42,9 @@ server.pre(restify.pre.sanitizePath());
 server.use(plugins.acceptParser(server.acceptable));
 server.use(plugins.queryParser());
 server.use(plugins.bodyParser());
+
+server.use(passport.initialize())
+require('./middlewares/passportService')(passport)
 
 // setup Routing and Error Event Handling
 routes(server, serviceLocator);

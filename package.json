@@ -6,7 +6,11 @@
   "dependencies": {
     "bcrypt": "^3.0.7",
     "dotenv": "^8.2.0",
+    "jsonwebtoken": "^8.5.1",
+    "jwt-decode": "^2.2.0",
     "mongoose": "^5.8.10",
+    "passport": "^0.4.1",
+    "passport-jwt": "^4.0.0",
     "restify": "^8.5.1",
     "restify-cors-middleware": "^1.1.1",
     "restify-plugins": "^1.6.0",
