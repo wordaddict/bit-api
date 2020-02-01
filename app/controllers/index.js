@@ -182,7 +182,7 @@
                 }
                 return Response.success(res, {
                     message: 'All subcategories gotten successfully',
-                    response: subCategories,
+                    response: subCategories[0],
                     }, HttpStatus.OK)
             })
             
