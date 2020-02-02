@@ -33,8 +33,8 @@ class MainService {
   };
 
 
-  getAllTrades(user_id){
-    return this.trade.get({_id: user_id});
+  getAllTrades(userId){
+    return TradeModel.find({userId});
   };
 
   saveAccount(param){

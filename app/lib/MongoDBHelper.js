@@ -45,6 +45,10 @@ class MongoDBHelper {
     return this.mongodbModel.findOne(param);
   }
 
+  getAll(param){
+    return this.mongodbModel.find(param);
+  }
+
   getMSISDN(param){
     return this.mongodbModel.find(param).select('msisdn -_id')
   }
